@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helm-hpa-test-1
+spec:
+  {{ if .Values.staticReplicas }}
+  replicas: 10
+  {{ end }}
+
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: helm-hpa-test-1
+  template:
+    metadata:
+      labels:
+        app: helm-hpa-test-1
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - command: [tail, -f, /dev/null]
+        image: debian
+        name: helm-hpa-test-1
+
+---
+
+{{ if not .Values.staticReplicas }}
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: helm-hpa-test-1
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: helm-hpa-test-1
+  minReplicas: 10
+  maxReplicas: 16
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 70
+        type: Utilization
+    type: Resource
+
+{{ end }}
+
+---
